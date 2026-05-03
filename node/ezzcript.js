@@ -43,6 +43,8 @@ async function runEzzcript(filePath) {
   const rlInterativo = readline.createInterface({ input, output })
   const rlArquivo = readline.createInterface({ input: fileStream, crlfDelay: Infinity })
 
+  let executar = true
+
   const variaveis = {}
   let linhaAtual = 0
 
@@ -51,10 +53,19 @@ async function runEzzcript(filePath) {
     const trimmed = linha.trim()
     if (!trimmed || trimmed.startsWith('//')) continue
 
+    if (trimmed.startsWith('}')) {
+      executar = true
+      continue
+    }
+
     const [comand, ...resto] = trimmed.split(' ')
     const args = resto.join(' ')
 
     if (comand === '$') {
+      if (!executar) {
+        continue
+      }
+
       // Imprime variável ou texto literal.
       if (isCalculable(args.trim())) {
         // Processar expressão matemática
@@ -174,6 +185,14 @@ async function runEzzcript(filePath) {
         }
       }
       variaveis[nome] = valor
+
+    } else if (comand === '/') {
+      if (args.includes('(') && args.includes(')') && args.includes('{')) {
+        args.sp
+
+      } else {
+        EzzcriptError('Má formação em comando ("/")', linhaAtual)
+      }
 
     } else {
       EzzcriptError(`Comando desconhecido: ${comand}`, linhaAtual)
