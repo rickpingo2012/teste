@@ -13,6 +13,27 @@ async function askInput(prompt, rl) {
   return await rl.question(prompt + ' ')
 }
 
+function isCalculable(expr) {
+  if (expr.includes('+') || expr.includes('-') || expr.includes('*') || expr.includes('/')) {
+    return true
+  }
+  return false
+}
+
+function evaluateExpression(expr, variaveis) {
+  // Substituir variáveis na expressão
+  for (const varName in variaveis) {
+    const varValue = variaveis[varName]
+    expr = expr.replace(new RegExp(`\\b${varName}\\b`, 'g'), varValue)
+  }
+  // Avaliar a expressão matemática
+  return eval(expr)
+}
+
+function isFString(value) {
+  return typeof value === 'string' && value.includes(';{') && value.includes('}')
+}
+
 async function runEzzcript(filePath) {
   if (!fs.existsSync(filePath)) {
     EzzcriptError(`Arquivo não encontrado: ${filePath}`, 0)
@@ -35,7 +56,32 @@ async function runEzzcript(filePath) {
 
     if (comand === '$') {
       // Imprime variável ou texto literal.
+      if (isCalculable(args.trim())) {
+        // Processar expressão matemática
+        console.log(evaluateExpression(args.trim(), variaveis))
+        continue
+      }
+
+      if (isFString(args)) {
+        const fstring = args.split(';{')
+        let result = fstring[0]
+        for (let i = 1; i < fstring.length; i++) {
+          const part = fstring[i].split('}')
+          const varName = part[0].trim()
+          const varValue = variaveis[varName] !== undefined ? variaveis[varName] : `{${varName}}`
+          result += varValue + part.slice(1).join('}')
+        }
+        console.log(result)
+        continue
+      }
+      
       if (args in variaveis) {
+        if (isCalculable(args.trim())) {
+          // Processar expressão matemática
+          console.log(evaluateExpression(args.trim(), variaveis))
+          continue
+        }
+
         console.log(variaveis[args])
       } else {
         console.log(args)
@@ -51,7 +97,11 @@ async function runEzzcript(filePath) {
       const nome = varName.trim()
       let valor = varValue.trim()
 
-      if (valor.startsWith('#')) {
+      if (isCalculable(valor)) {
+        valor = evaluateExpression(valor, variaveis)
+      }
+
+      if (String(valor).startsWith('#')) {
         const prompt = valor.substring(1).trim()
         const inputValue = await askInput(prompt, rlInterativo)
         if (!isNaN(inputValue)) {
