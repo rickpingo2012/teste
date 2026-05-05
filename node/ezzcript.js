@@ -30,6 +30,17 @@ function evaluateExpression(expr, variaveis) {
   return eval(expr)
 }
 
+function evaluateCondition(expr, variaveis) {
+  // Substituir variáveis na condição
+  for (const varName in variaveis) {
+    const varValue = variaveis[varName]
+    expr = expr.replace(new RegExp(`\\b${varName}\\b`, 'g'), varValue)
+  }
+  // Avaliar a condição booleana
+  return eval(expr)
+}
+
+
 function isFString(value) {
   return typeof value === 'string' && value.includes(';{') && value.includes('}')
 }
@@ -62,9 +73,7 @@ async function runEzzcript(filePath) {
     const args = resto.join(' ')
 
     if (comand === '$') {
-      if (!executar) {
-        continue
-      }
+      if (!executar) continue
 
       // Imprime variável ou texto literal.
       if (isCalculable(args.trim())) {
@@ -99,6 +108,8 @@ async function runEzzcript(filePath) {
       }
 
     } else if (comand === 'int') {
+      if (!executar) continue
+
       // int nome = valor
       const [varName, varValue] = args.split('=')
       if (!varValue) {
@@ -137,6 +148,8 @@ async function runEzzcript(filePath) {
       }
 
     } else if (comand === 'bool') {
+      if (!executar) continue
+
       // bool nome = true|false
       const [varName, varValue] = args.split('=')
       if (!varValue) {
@@ -163,6 +176,8 @@ async function runEzzcript(filePath) {
       }
 
     } else if (comand === 'str') {
+      if (!executar) continue
+
       // str nome = texto ou #prompt
       const [varName, varValue] = args.split('=')
       if (!varValue) {
@@ -188,10 +203,29 @@ async function runEzzcript(filePath) {
 
     } else if (comand === '/') {
       if (args.includes('(') && args.includes(')') && args.includes('{')) {
-        args.sp
+        const condicaoMatch = args.match(/\((.*?)\)/)
+        // Aqui fica o if/else
+        if (condicaoMatch) {
+          const condicao = condicaoMatch[1].trim()
+          const resultado = evaluateCondition(condicao, variaveis)
+          if (resultado) {
+            executar = true
+          } else {
+            executar = false
+          }
+        } else {
+          EzzcriptError('Condição mal formada no comando ("/")', linhaAtual)
+        }
 
       } else {
         EzzcriptError('Má formação em comando ("/")', linhaAtual)
+      }
+
+    } else if (comand === '!/') {
+      if (args.includes('{')) {
+        executar = executar ? false : true
+      } else {
+        EzzcriptError('Má formação em comando ("!/")', linhaAtual)
       }
 
     } else {
